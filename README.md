@@ -17,6 +17,13 @@ A powerful, reusable datatable wrapper for Angular applications, built on top of
 npm install @etsena/ngx-datatable-wrapper
 ```
 
+### Compatibility
+
+| Library Version | Angular Version |
+| --------------- | --------------- |
+| 2.x.x           | 19.x.x          |
+| 1.x.x           | 18.x.x          |
+
 ### Peer Dependencies
 
 Ensure you have the following dependencies installed in your project:

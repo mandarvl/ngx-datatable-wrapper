@@ -1,0 +1,268 @@
+<div class="ngx-datatable bootstrap">
+  <div class="py-3">
+    @if (
+      name ||
+      searchFields?.length ||
+      dateField ||
+      statuses?.length ||
+      exportExcel.observed
+    ) {
+      <div class="row justify-content-between align-items-center gx-2">
+        <div class="col row gx-2">
+          @if (name) {
+            <h5 class="col-auto mb-0">
+              {{ name }}
+              <span class="label label-primary">{{ table.count || 0 }}</span>
+            </h5>
+          }
+          @if (searchFields?.length) {
+            <div class="col-6 col-sm-4 col-xl-3">
+              <input
+                type="search"
+                name="search"
+                placeholder="Rechercher..."
+                class="form-control"
+                [(ngModel)]="searchTerm"
+                (ngModelChangeDebounced)="onSearch($event)"
+              />
+            </div>
+          }
+          @if (dateField) {
+            <div class="col-6 col-sm-4 col-xl-3 position-relative">
+              <input
+                type="text"
+                [bsConfig]="{
+                  showWeekNumbers: false,
+                  isAnimated: true,
+                  adaptivePosition: true,
+                  containerClass: 'theme-primary',
+                  rangeInputFormat: 'DD MMM YY',
+                }"
+                placeholder="Date"
+                [(ngModel)]="dates"
+                (ngModelChange)="filterByDate()"
+                readonly
+                class="form-control"
+                bsDaterangepicker
+              />
+              <span
+                *ngIf="dates?.length"
+                role="button"
+                title="Effacer"
+                class="btn-clear"
+                (click)="clearDate()"
+                >×</span
+              >
+            </div>
+          }
+          @if (statuses?.length) {
+            <div class="col-6 col-sm-4 col-xl-3">
+              <ng-select
+                [items]="statuses"
+                bindLabel="label"
+                bindValue="value"
+                placeholder="Statut"
+                [(ngModel)]="selectedStatus"
+                (ngModelChange)="filterTable('status', $event)"
+                appendTo="body"
+                [clearable]="true"
+              >
+                <ng-template ng-option-tmp let-item="item">
+                  {{ "STATUS." + item | translate }}
+                </ng-template>
+                <ng-template ng-label-tmp let-item="item">
+                  {{ "STATUS." + item | translate }}
+                </ng-template>
+              </ng-select>
+            </div>
+          }
+        </div>
+        @if (exportExcel.observed) {
+          <div class="col-auto">
+            <button type="button" class="btn btn-light" (click)="onExport()">
+              Exporter
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+  <ngx-datatable
+    #table
+    class="bootstrap striped"
+    [columns]="columns"
+    [columnMode]="'force'"
+    [rows]="tableModel?.data"
+    [headerHeight]="50"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [scrollbarH]="true"
+    [externalPaging]="true"
+    [externalSorting]="true"
+    [count]="tableModel?.summary?.totalElements || 0"
+    [offset]="tableModel?.tableState?.slice?.pageNumber || 0"
+    [limit]="tableModel?.tableState?.slice?.size || 0"
+    [selectionType]="$any(select.observed ? SelectionType.single : null)"
+    [loadingIndicator]="isLoading"
+    (page)="onPageChange($event)"
+    (sort)="onSort($event)"
+    (select)="onSelect($event)"
+    (tableContextmenu)="onContextMenu($event)"
+  >
+    <ngx-datatable-footer>
+      <ng-template
+        ngx-datatable-footer-template
+        let-rowCount="rowCount"
+        let-pageSize="pageSize"
+        let-curPage="curPage"
+        let-offset="offset"
+      >
+        <div class="page-count row">
+          <div class="col-auto" hidden>
+            {{ rowCount.toLocaleString() }} {{ table.messages.totalMessage }}
+          </div>
+          <div class="col-auto small fw-normal">
+            <select
+              (change)="onLimitChange($any($event).target?.value)"
+              class="page-limit"
+            >
+              <option
+                *ngFor="let option of pageLimitOptions"
+                [value]="option.value"
+                [selected]="option.value == currentPageLimit"
+              >
+                {{ option.value }}
+              </option>
+            </select>
+            par page
+          </div>
+        </div>
+        <datatable-pager
+          [pagerLeftArrowIcon]="'datatable-icon-left'"
+          [pagerRightArrowIcon]="'datatable-icon-right'"
+          [pagerPreviousIcon]="'datatable-icon-prev'"
+          [pagerNextIcon]="'datatable-icon-skip'"
+          [page]="curPage"
+          [size]="pageSize"
+          [count]="rowCount"
+          [hidden]="!(rowCount / pageSize > 1)"
+          (change)="table.onFooterPage($event)"
+        >
+        </datatable-pager>
+      </ng-template>
+    </ngx-datatable-footer>
+  </ngx-datatable>
+</div>
+<ng-template #emptyTemplate let-row="row" let-value="value"></ng-template>
+<ng-template #idAnchorEditTemplate let-row="row" let-value="value">
+  <a [routerLink]="[editUrl, value]" class="btn btn-primary" title="Modifier">
+    <i class="ti ti-pencil" aria-hidden="true"></i>
+  </a>
+</ng-template>
+<ng-template #idAnchorTemplate let-row="row" let-value="value">
+  <a
+    [routerLink]="[editUrl, value]"
+    class="text-link"
+    title="Voir les détails"
+    >{{ value }}</a
+  >
+</ng-template>
+<ng-template #actionTemplate let-value="value" let-row="row">
+  <button
+    class="btn btn-primary"
+    title="Modifier"
+    (click)="onEdit(row)"
+    *ngIf="edit.observed || editUrl"
+  >
+    <i class="ti ti-pencil" aria-hidden="true"></i>
+  </button>
+  <button
+    class="btn btn-danger"
+    [class.ms-1]="edit.observed || editUrl"
+    title="Supprimer"
+    *ngIf="delete.observed"
+    (click)="onDelete(row)"
+  >
+    <i class="ti ti-trash" aria-hidden="true"></i>
+  </button>
+</ng-template>
+<ng-template #contactTemplate let-row="row" let-value="value">
+  {{ value.name }}
+  <br />
+  <span class="text-muted" *ngIf="value.code">{{ value.code }}</span>
+  <span class="text-muted" *ngIf="value.phonePrimary"
+    ><span *ngIf="value.code"> | </span>{{ value.phonePrimary }}</span
+  >
+</ng-template>
+<ng-template #objectNameTemplate let-row="row" let-value="value">
+  {{ value.name }}
+</ng-template>
+<ng-template #listObjectNameTemplate let-row="row" let-value="value">
+  <ul
+    class="mb-0"
+    [ngStyle]="{
+      'list-style': value.length > 1 ? 'disc' : 'none',
+      'padding-left': value.length > 1 ? '15px' : '0',
+    }"
+  >
+    <ng-container *ngFor="let item of value; let first = first">
+      <li>
+        <ng-container
+          [ngTemplateOutlet]="objectNameTemplate"
+          [ngTemplateOutletContext]="{ value: item, row: row }"
+        ></ng-container>
+        <ng-container *ngIf="item.description as desc"
+          ><span class="text-muted">{{ desc }}</span></ng-container
+        >
+      </li>
+    </ng-container>
+  </ul>
+</ng-template>
+<ng-template
+  #translateTemplate
+  let-row="row"
+  let-column="column"
+  let-value="value"
+>
+  {{ column.prop + "." + value | uppercase | translate }}
+</ng-template>
+<ng-template #currencyTemplate let-row="row" let-value="value">
+  {{ value | currency: "MGA" : "" : "" }}
+</ng-template>
+<ng-template #currencyWithSymbolTemplate let-row="row" let-value="value">
+  {{ row.currency?.symbol || "??" }}
+  {{ value | currency: row.currency?.code : "" : "" : "fr" }}
+</ng-template>
+<ng-template #booleanTemplate let-row="row" let-value="value">
+  <i
+    class="ti"
+    [ngClass]="{
+      'ti-check text-success': value,
+      'ti-times text-danger': !value,
+    }"
+  ></i>
+</ng-template>
+<ng-template #activeTemplate let-row="row" let-value="value">
+  <span
+    class="badge badge-pill"
+    [ngClass]="{ 'bg-success': value, 'bg-danger': !value }"
+    >{{ value ? "Actif" : "Inactif" }}</span
+  >
+</ng-template>
+<ng-template #colorTemplate let-row="row" let-value="value">
+  <span class="badge-dot" [ngStyle]="{ backgroundColor: value }"></span>
+</ng-template>
+<ng-template #statusTemplate let-row="row" let-value="value">
+  <span class="badge badge-pill bg-{{ getStatusClass(value) }}">{{
+    "STATUS." + value | translate
+  }}</span>
+</ng-template>
+<ng-template #dateTemplate let-row="row" let-value="value">
+  {{ value | date: "dd/MM/yyyy" }}
+</ng-template>
+<ng-template #dateTimeTemplate let-row="row" let-value="value">
+  {{ value | date: "dd/MM/yyyy HH:mm" }}
+</ng-template>
+<ng-template #arrayCountTemplate let-row="row" let-value="value">
+  {{ value?.length }}
+</ng-template>
